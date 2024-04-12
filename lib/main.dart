@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:level/router/navigation_bar.dart' as level_nav;
+import 'package:level/theme/theme.dart';
 
 void main() {
   runApp(const MyApp());
@@ -10,9 +11,11 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
+    return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: MyHomePage(title: 'Level Measurement'),
+      home: const MyHomePage(title: 'Level Measurement'),
+      theme: lightMode,
+      darkTheme: darkMode,
     );
   }
 }
