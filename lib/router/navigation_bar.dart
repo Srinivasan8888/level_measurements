@@ -26,14 +26,14 @@ class NavigationBarState extends State<NavigationBar> {
     return Scaffold(
       body: _pages[_selectedIndex],
       bottomNavigationBar: Container(
-        color: Colors.black,
+        color: Theme.of(context).colorScheme.tertiary,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 15.0, vertical: 20),
           child: GNav(
-            backgroundColor: Colors.black,
+            // backgroundColor: Theme.of(context).colorScheme.primary,
             color: Colors.white,
             activeColor: Colors.white,
-            tabBackgroundColor: Colors.grey,
+            tabBackgroundColor: Theme.of(context).colorScheme.secondary,
             tabBorderRadius: 100,
             gap: 8,
             haptic: true,

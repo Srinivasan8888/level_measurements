@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:level/components/box.dart';
 import 'package:level/components/button.dart';
+import 'package:level/theme/theme_provider.dart';
+import 'package:provider/provider.dart';
 
 class Test extends StatefulWidget {
   const Test({super.key});
@@ -16,8 +18,13 @@ class _TestState extends State<Test> {
       backgroundColor: Theme.of(context).colorScheme.background,
       body: Center(
         child: MyBox(
-          color: Colors.deepPurple[300],
-          child: MyButton(color: Colors.deepPurple[200], onTap: () {}),
+          color: Theme.of(context).colorScheme.primary,
+          child: MyButton(
+              color: Theme.of(context).colorScheme.secondary,
+              onTap: () {
+                Provider.of<ThemeProvider>(context, listen: false)
+                    .toggleTheme();
+              }),
         ),
       ),
     );
