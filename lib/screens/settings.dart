@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:getwidget/components/toggle/gf_toggle.dart';
 import 'package:getwidget/types/gf_toggle_type.dart';
 import 'package:level/screens/test.dart';
+import 'package:level/theme/theme.dart';
 import 'package:level/theme/theme_provider.dart';
 import 'package:provider/provider.dart';
 
@@ -24,15 +25,16 @@ class _SettingsState extends State<Settings> {
           child: ListView(
             children: [
               ListTile(
-                title: const Text("DarkMode"),
-                trailing: GFToggle(
-                  onChanged: (val) {
-                    Provider.of<ThemeProvider>(context, listen: false)
-                        .toggleTheme();
-                  },
-                  value: false,
-                  type: GFToggleType.ios,
-                ),
+                title: const Text("Light Mode"),
+                trailing: Consumer<ThemeProvider>(
+                    builder: (context, themeProvider, _) {
+                  return GFToggle(
+                      onChanged: (val) {
+                        themeProvider.toggleTheme(); // Toggles theme on change
+                      },
+                      value: themeProvider.themeData == lightMode,
+                      type: GFToggleType.ios);
+                }),
               ),
               ListTile(
                 title: const Text("Logout"),

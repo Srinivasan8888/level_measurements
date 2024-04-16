@@ -41,6 +41,7 @@ dependencies:
   getwidget: ^4.0.0
   dropdown_button2: ^2.3.9
   shared_preferences: ^2.2.3
+  fl_chart: ^0.67.0
   provider:
 
 
