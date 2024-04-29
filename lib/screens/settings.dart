@@ -18,8 +18,14 @@ class _SettingsState extends State<Settings> {
   Widget build(BuildContext context) {
     return Scaffold(
         appBar: AppBar(
+          backgroundColor: Colors.transparent,
           automaticallyImplyLeading: false,
-          title: const Text('Settings'),
+          title: const Text('Settings',
+              style: TextStyle(
+                fontFamily: 'Epilogue',
+                fontWeight: FontWeight.w300,
+                fontSize: 30,
+              )),
         ),
         endDrawer: Drawer(
           child: ListView(

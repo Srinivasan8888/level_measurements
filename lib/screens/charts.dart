@@ -20,43 +20,33 @@ class _ChartsState extends State<Charts> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
         automaticallyImplyLeading: false,
-        title: const Text('Chart'),
+        title: const Text('Chart',
+            style: TextStyle(
+                fontFamily: 'Epilogue',
+                fontWeight: FontWeight.w300,
+                fontSize: 30)),
       ),
       body: Stack(
         children: <Widget>[
-          AspectRatio(
-            aspectRatio: 1.70,
-            child: Padding(
-              padding: const EdgeInsets.only(
-                right: 18,
-                left: 12,
-                top: 24,
-                bottom: 0,
-              ),
-              child: LineChart(
-                showAvg ? avgData() : mainData(),
+          RotatedBox(
+            quarterTurns: 1,
+            child: AspectRatio(
+              aspectRatio: 1.70,
+              child: Padding(
+                padding: const EdgeInsets.only(
+                  right: 8,
+                  left: 12,
+                  top: 10,
+                  bottom: 0,
+                ),
+                child: LineChart(
+                  showAvg ? avgData() : mainData(),
+                ),
               ),
             ),
-          ),
-          // SizedBox(
-          //   width: 60,
-          //   height: 34,
-          //   child: TextButton(
-          //     onPressed: () {
-          //       setState(() {
-          //         showAvg = !showAvg;
-          //       });
-          //     },
-          //     child: Text(
-          //       'avg',
-          //       style: TextStyle(
-          //         fontSize: 12,
-          //         color: showAvg ? Colors.white.withOpacity(0.5) : Colors.white,
-          //       ),
-          //     ),
-          //   ),
-          // ),
+          )
         ],
       ),
     );

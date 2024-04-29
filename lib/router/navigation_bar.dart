@@ -51,7 +51,7 @@ class NavigationBarState extends State<NavigationBar> {
                 text: "Home",
               ),
               GButton(
-                icon: Icons.bar_chart,
+                icon: Icons.insights,
                 text: "Charts",
               ),
               GButton(
