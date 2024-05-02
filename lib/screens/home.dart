@@ -1,6 +1,9 @@
+import 'dart:async';
+import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:syncfusion_flutter_gauges/gauges.dart';
 
 class Home extends StatefulWidget {
@@ -11,18 +14,73 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> {
-  final _cylindersList = ["XY0001", "XY0002", "XY0003", "XY0004", "XY0005"];
-  String? _selectedVal;
-
-  final List<Map<String, dynamic>> _gridlist = [
-    {"title": "Battery", "value": 70},
-    {"title": "Signal", "value": 76},
-    {"title": "Temp", "value": 33},
-    {"title": "Humidity", "value": 44},
-    {"title": "Pressure", "value": 45},
-    {"title": "Altitude", "value": 20},
-    {"title": "Data frequency", "value": 32},
+  final _cylindersList = [
+    "XY00001",
+    "XY00002",
+    "XY00003",
+    "XY00004",
+    "XY00005"
   ];
+  Timer? _timer;
+  String? _selectedVal;
+  dynamic
+      _currentLevel; // Corrected: Removed duplicate and kept only one declaration
+  List<Map<String, dynamic>> _gridlist = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedVal = _cylindersList.first; // Set default value
+    // Fetch data for the default cylinder
+    // _timer = Timer.periodic(Duration(seconds: 1), (timer) => fetchData());
+
+    fetchData();
+  }
+
+  Future<void> fetchData() async {
+    if (_selectedVal == null) return;
+
+    _timer?.cancel(); // Cancel any existing timer
+    _timer = Timer.periodic(Duration(seconds: 1), (Timer timer) async {
+      try {
+        final response = await http
+            .get(Uri.parse('http://192.168.1.13:8000/asset/$_selectedVal'));
+        if (response.statusCode == 200) {
+          var data = jsonDecode(response.body);
+          // Check if data has changed before updating the state
+          if (_currentLevel != data['Level'] ||
+              _gridlist[0]['value'] != data['Battery']) {
+            setState(() {
+              _currentLevel = data['Level'];
+              _gridlist = [
+                {"title": "Battery", "value": data['Battery']},
+                {"title": "Signal", "value": data['Signal']},
+                {"title": "Temp", "value": data['Temp']},
+                {"title": "Humidity", "value": data['Humidity']},
+                {"title": "Pressure", "value": data['Pressure']},
+                {"title": "Altitude", "value": data['Altitude']},
+                {"title": "Data frequency", "value": data['Data frequency']},
+              ];
+            });
+          }
+        } else {
+          throw Exception('Failed to load data');
+        }
+      } catch (e) {
+        print('Caught error: $e');
+        setState(() {
+          _gridlist = []; // Clear data or handle error appropriately
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer
+        ?.cancel(); // Make sure to cancel the timer when the widget is disposed
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -152,6 +210,7 @@ class _HomeState extends State<Home> {
                     setState(() {
                       _selectedVal = newValue;
                     });
+                    fetchData();
                   },
                   items: _cylindersList
                       .map<DropdownMenuItem<String>>((String value) {
@@ -181,7 +240,7 @@ class _HomeState extends State<Home> {
                     offset: const Offset(0, 3))
               ],
             ),
-            child: const Column(
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Padding(
@@ -198,7 +257,7 @@ class _HomeState extends State<Home> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text("20,000 ML",
+                      Text("${_currentLevel ?? 'Loading...'} ML",
                           style: TextStyle(
                               fontWeight: FontWeight.w600,
                               fontSize: 20,
