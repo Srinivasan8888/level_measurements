@@ -6,6 +6,12 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:syncfusion_flutter_gauges/gauges.dart';
 
+void main() {
+  runApp(const MaterialApp(
+    home: Home(),
+  ));
+}
+
 class Home extends StatefulWidget {
   const Home({super.key});
 
@@ -23,62 +29,79 @@ class _HomeState extends State<Home> {
   ];
   Timer? _timer;
   String? _selectedVal;
-  dynamic
-      _currentLevel; // Corrected: Removed duplicate and kept only one declaration
+  dynamic _currentLevel = 'Loading...'; // Initialized to 'Loading...'
   List<Map<String, dynamic>> _gridlist = [];
+  Map<String, dynamic>? _lastData;
 
   @override
   void initState() {
     super.initState();
-    _selectedVal = _cylindersList.first; // Set default value
-    // Fetch data for the default cylinder
-    // _timer = Timer.periodic(Duration(seconds: 1), (timer) => fetchData());
-
-    fetchData();
+    _selectedVal = _cylindersList.first;
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) => fetchData());
   }
 
   Future<void> fetchData() async {
     if (_selectedVal == null) return;
-
-    _timer?.cancel(); // Cancel any existing timer
-    _timer = Timer.periodic(Duration(seconds: 1), (Timer timer) async {
-      try {
-        final response = await http
-            .get(Uri.parse('http://192.168.1.13:8000/asset/$_selectedVal'));
-        if (response.statusCode == 200) {
-          var data = jsonDecode(response.body);
-          // Check if data has changed before updating the state
-          if (_currentLevel != data['Level'] ||
-              _gridlist[0]['value'] != data['Battery']) {
-            setState(() {
-              _currentLevel = data['Level'];
-              _gridlist = [
-                {"title": "Battery", "value": data['Battery']},
-                {"title": "Signal", "value": data['Signal']},
-                {"title": "Temp", "value": data['Temp']},
-                {"title": "Humidity", "value": data['Humidity']},
-                {"title": "Pressure", "value": data['Pressure']},
-                {"title": "Altitude", "value": data['Altitude']},
-                {"title": "Data frequency", "value": data['Data frequency']},
-              ];
-            });
-          }
-        } else {
-          throw Exception('Failed to load data');
+    try {
+      final response = await http.get(Uri.parse(
+          'http://43.204.133.45:4000/sensor/leveldata/$_selectedVal'));
+      if (response.statusCode == 200) {
+        var newData = jsonDecode(response.body);
+        print(newData);
+        bool hasDataChanged(
+            Map<String, dynamic>? oldData, Map<String, dynamic> newData) {
+          if (oldData == null) return true;
+          return oldData['level'] != newData['level'] ||
+              oldData['batterylevel'] != newData['batterylevel'] ||
+              oldData['signal'] != newData['signal'] ||
+              oldData['devicetemp'] != newData['devicetemp'] ||
+              oldData['humidity'] != newData['humidity'] ||
+              oldData['pressure'] != newData['pressure'] ||
+              oldData['altitude'] != newData['altitude'] ||
+              oldData['datafrequency'] != newData['datafrequency'];
         }
-      } catch (e) {
-        print('Caught error: $e');
-        setState(() {
-          _gridlist = []; // Clear data or handle error appropriately
-        });
+
+        if (hasDataChanged(_lastData, newData)) {
+          setState(() {
+            _currentLevel = newData['level'];
+            _gridlist = [
+              {
+                "title": "Battery",
+                "value": newData['batterylevel'],
+                "unit": "%"
+              },
+              {"title": "Signal", "value": newData['signal'], "unit": "%"},
+              {"title": "Temp", "value": newData['devicetemp'], "unit": "°C"},
+              {"title": "Humidity", "value": newData['humidity'], "unit": "%"},
+              {
+                "title": "Pressure",
+                "value": newData['pressure'],
+                "unit": "hPa"
+              },
+              {"title": "Altitude", "value": newData['altitude'], "unit": "m"},
+              {
+                "title": "Data Hz",
+                "value": newData['datafrequency'],
+                "unit": "Hz"
+              },
+            ];
+            _lastData = newData;
+          });
+        }
+      } else {
+        throw Exception('Failed to load data');
       }
-    });
+    } catch (e) {
+      print('Caught error: $e');
+      setState(() {
+        _gridlist = [];
+      });
+    }
   }
 
   @override
   void dispose() {
-    _timer
-        ?.cancel(); // Make sure to cancel the timer when the widget is disposed
+    _timer?.cancel();
     super.dispose();
   }
 
@@ -98,8 +121,8 @@ class _HomeState extends State<Home> {
         child: Column(
           children: [
             SizedBox(
-              height: 280, // Explicit height for the header
-              child: _head(), // This is the fixed header part
+              height: 280,
+              child: _head(context),
             ),
             Expanded(
               child: CustomScrollView(
@@ -130,17 +153,10 @@ class _HomeState extends State<Home> {
                       delegate: SliverChildBuilderDelegate(
                         (context, index) {
                           final gridItem = _gridlist[index];
-                          String parseValue(String value) {
-                            // Remove non-numeric characters and trim any whitespace
-                            String numericValue =
-                                value.replaceAll(RegExp(r'[^0-9]'), '').trim();
-                            return numericValue;
-                          }
-
                           return GridItem(
                             title: gridItem['title'] as String,
-                            value: int.parse(
-                                parseValue(gridItem['value'].toString())),
+                            value: int.parse(gridItem['value'].toString()),
+                            unit: gridItem['unit'] as String,
                           );
                         },
                         childCount: _gridlist.length,
@@ -156,7 +172,7 @@ class _HomeState extends State<Home> {
     );
   }
 
-  Widget _head() {
+  Widget _head(BuildContext context) {
     return Stack(
       clipBehavior: Clip.none,
       children: [
@@ -262,8 +278,8 @@ class _HomeState extends State<Home> {
                               fontWeight: FontWeight.w600,
                               fontSize: 20,
                               color: Colors.white)),
-                      SizedBox(width: 10),
-                      Icon(Icons.sensors, color: Colors.white, size: 40),
+                      const SizedBox(width: 10),
+                      const Icon(Icons.sensors, color: Colors.white, size: 40),
                     ],
                   ),
                 ),
@@ -288,10 +304,12 @@ class _HomeState extends State<Home> {
 class GridItem extends StatelessWidget {
   final String title;
   final int value;
+  final String unit;
 
   const GridItem({
     required this.title,
     required this.value,
+    required this.unit,
     super.key,
   });
 
@@ -304,33 +322,43 @@ class GridItem extends StatelessWidget {
       ),
       child: Padding(
         padding: const EdgeInsets.all(10),
-        child: SingleChildScrollView(
-          physics: const NeverScrollableScrollPhysics(),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  final cellWidth = constraints.maxWidth;
-                  final cellHeight = constraints.maxHeight;
-                  final gaugeSize = math.min(cellWidth, cellHeight) *
-                      0.8; // Adjust the scaling factor as needed
-                  return SizedBox(
-                    width: gaugeSize,
-                    height: gaugeSize,
-                    child: _buildRadialGauge(value),
-                  );
-                },
-              ),
-              Text(
-                title,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final cellWidth = constraints.maxWidth;
+                final cellHeight = constraints.maxHeight;
+                final gaugeSize = math.min(cellWidth, cellHeight) *
+                    0.8; // Adjust the scaling factor as needed
+                return SizedBox(
+                  width: gaugeSize,
+                  height: gaugeSize,
+                  child: _buildRadialGauge(value),
+                );
+              },
+            ),
+            RichText(
+              text: TextSpan(
+                text: "$title: $value", // Display the value next to the title
                 style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
+                  color: Colors.black,
                 ),
+                children: <TextSpan>[
+                  TextSpan(
+                    text: " $unit", // Append unit next to the value
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -361,7 +389,7 @@ class RadialNonLinearLabel extends StatelessWidget {
           radiusFactor: 0.9,
           showTicks: true,
           showLastLabel: true,
-          maximum: 150,
+          maximum: 300,
           axisLabelStyle: const GaugeTextStyle(),
           pointers: <GaugePointer>[
             NeedlePointer(
@@ -403,10 +431,4 @@ class RadialNonLinearLabel extends StatelessWidget {
       ],
     );
   }
-}
-
-void main() {
-  runApp(const MaterialApp(
-    home: Home(),
-  ));
 }
