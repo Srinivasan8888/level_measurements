@@ -1,9 +1,12 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:level/theme/app_color.dart';
+import 'package:intl/intl.dart';
+import 'package:level/theme/app_color.dart'; // Ensure this is the correct path for your theme
 
 class Charts extends StatefulWidget {
   const Charts({super.key});
@@ -20,7 +23,6 @@ class _ChartsState extends State<Charts> {
     "XY00004",
     "XY00005"
   ];
-
   final List<String> _assetList = [
     "level",
     "batterylevel",
@@ -31,26 +33,36 @@ class _ChartsState extends State<Charts> {
     "altitude",
     "datafrequency"
   ];
-
   String _selectedCylinder = "XY00001";
   String _selectedAsset = "level";
   List<FlSpot> _chartData = [];
+  Timer? _timer;
 
   @override
   void initState() {
     super.initState();
     fetchData();
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      // Adjust the interval as needed
+      fetchData();
+    });
   }
 
   Future<void> fetchData() async {
-    final response = await http.get(Uri.parse(
-        'http://43.204.133.45:4000/sensor/levelchartdata/$_selectedCylinder/$_selectedAsset'));
+    String url =
+        'http://43.204.133.45:4000/sensor/levelchartdata/$_selectedCylinder/$_selectedAsset';
+    print('Fetching data from: $url');
+
+    final response = await http.get(Uri.parse(url));
+    print('Response status: ${response.statusCode}');
+    print('Response body: ${response.body}');
 
     if (response.statusCode == 200) {
       List<dynamic> jsonData = jsonDecode(response.body);
       List<FlSpot> loadedData = jsonData.map((dataPoint) {
-        double x = double.parse(dataPoint['x'].toString());
-        double y = double.parse(dataPoint['y'].toString());
+        double y = double.parse(dataPoint[_selectedAsset].toString());
+        DateTime createdAt = DateTime.parse(dataPoint['createdAt']);
+        double x = createdAt.millisecondsSinceEpoch.toDouble();
         return FlSpot(x, y);
       }).toList();
 
@@ -58,8 +70,14 @@ class _ChartsState extends State<Charts> {
         _chartData = loadedData;
       });
     } else {
-      print('Failed to fetch data: ${response.statusCode}');
+      print('Failed to fetch data');
     }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
   }
 
   @override
@@ -193,56 +211,27 @@ class _ChartsState extends State<Charts> {
   }
 
   LineChartData mainData() {
+    // Sorting the data by x (timestamp) to ensure correct plotting
+    _chartData.sort((a, b) => a.x.compareTo(b.x));
+
+    // Dynamic range calculations with padding
+    final double minX = _chartData.isNotEmpty ? _chartData.first.x : 0;
+    final double maxX = _chartData.isNotEmpty ? _chartData.last.x : 0;
+    final double rangePadding =
+        (maxX - minX) * 0.05; // Adding 5% padding on both sides
+
     return LineChartData(
-      gridData: FlGridData(
-        show: true,
-        drawVerticalLine: true,
-        getDrawingHorizontalLine: (value) {
-          return const FlLine(
-            color: AppColors.mainGridLineColor,
-            strokeWidth: 1,
-          );
-        },
-        getDrawingVerticalLine: (value) {
-          return const FlLine(
-            color: AppColors.mainGridLineColor,
-            strokeWidth: 1,
-          );
-        },
-      ),
-      titlesData: FlTitlesData(
-        show: true,
-        rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-        topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-        bottomTitles: AxisTitles(
-          sideTitles: SideTitles(
-            showTitles: true,
-            reservedSize: 30,
-            interval: 1,
-            getTitlesWidget: bottomTitleWidgets,
-          ),
-        ),
-        leftTitles: AxisTitles(
-          sideTitles: SideTitles(
-            showTitles: true,
-            interval: 1,
-            getTitlesWidget: leftTitleWidgets,
-            reservedSize: 42,
-          ),
-        ),
-      ),
-      borderData: FlBorderData(
-        show: true,
-        border: Border.all(color: const Color(0xff37434d)),
-      ),
-      minX: 0,
-      maxX: 11,
+      minX: minX - rangePadding,
+      maxX: maxX + rangePadding,
       minY: 0,
-      maxY: 6,
+      maxY: _chartData.isEmpty
+          ? 10
+          : _chartData.map((spot) => spot.y).reduce(max) + 1,
+      // Adding some padding to maxY
       lineBarsData: [
         LineChartBarData(
           spots: _chartData,
-          isCurved: true,
+          isCurved: false,
           gradient: const LinearGradient(
             colors: [AppColors.contentColorCyan, AppColors.contentColorBlue],
             begin: Alignment.centerLeft,
@@ -250,7 +239,7 @@ class _ChartsState extends State<Charts> {
           ),
           barWidth: 5,
           isStrokeCapRound: true,
-          dotData: const FlDotData(show: false),
+          dotData: const FlDotData(show: true),
           belowBarData: BarAreaData(
             show: true,
             gradient: LinearGradient(
@@ -264,56 +253,53 @@ class _ChartsState extends State<Charts> {
           ),
         ),
       ],
-    );
-  }
+      titlesData: FlTitlesData(
+        bottomTitles: AxisTitles(
+          sideTitles: SideTitles(
+            showTitles: true,
+            getTitlesWidget: (value, meta) {
+              var date = DateTime.fromMillisecondsSinceEpoch(value.toInt());
+              Widget dateText = Text(
+                DateFormat('MM/dd').format(date),
+                style: const TextStyle(
+                  color: Colors.black,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 10,
+                ),
+              );
 
-  Widget bottomTitleWidgets(double value, TitleMeta meta) {
-    const style = TextStyle(
-      fontWeight: FontWeight.bold,
-      fontSize: 16,
-    );
-    Widget text;
-    switch (value.toInt()) {
-      case 2:
-        text = const Text('MAR', style: style);
-        break;
-      case 5:
-        text = const Text('JUN', style: style);
-        break;
-      case 8:
-        text = const Text('SEP', style: style);
-        break;
-      default:
-        text = const Text('', style: style);
-        break;
-    }
+              // Rotate the text by 45 degrees
+              return Transform.rotate(
+                angle: 45 * pi / 140, // Converts degrees to radians
+                child: dateText,
+              );
+            },
+            reservedSize:
+                60, // You might need to increase the reserved size for rotated labels
+          ),
+        ),
+        leftTitles: AxisTitles(
+          sideTitles: SideTitles(
+            showTitles: true,
+            getTitlesWidget: (value, meta) {
+              return Text(
+                value.toString(),
+                style: const TextStyle(
+                  color: Colors.blue, // Customize your text color
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12, // Customize your font size
+                ),
+              );
+            },
+            reservedSize: 40,
+          ),
+        ),
 
-    return SideTitleWidget(
-      axisSide: meta.axisSide,
-      child: text,
+        topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        rightTitles: const AxisTitles(
+            sideTitles:
+                SideTitles(showTitles: false)), // Hide right titles if needed
+      ),
     );
-  }
-
-  Widget leftTitleWidgets(double value, TitleMeta meta) {
-    const style = TextStyle(
-      fontWeight: FontWeight.bold,
-      fontSize: 15,
-    );
-    String text;
-    switch (value.toInt()) {
-      case 1:
-        text = '10K';
-        break;
-      case 3:
-        text = '30K';
-        break;
-      case 5:
-        text = '50K';
-        break;
-      default:
-        return Container();
-    }
-
-    return Text(text, style: style, textAlign: TextAlign.left);
   }
 }
