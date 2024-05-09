@@ -44,6 +44,7 @@ dependencies:
   fl_chart: ^0.67.0
   syncfusion_flutter_gauges: ^25.1.42
   http: ^1.2.1
+  syncfusion_flutter_charts: ^25.1.42+1
 
   provider:
 

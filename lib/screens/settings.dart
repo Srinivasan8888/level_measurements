@@ -59,9 +59,9 @@ class _SettingsState extends State<Settings> {
               ElevatedButton(
                 child: const Text("Test Page"),
                 onPressed: () {
-                  // Use the aliased import when referring to your custom NavigationBar
-                  Navigator.push(context,
-                      MaterialPageRoute(builder: (context) => const Test()));
+                  // Removed the 'const' keyword from the Test constructor
+                  Navigator.push(
+                      context, MaterialPageRoute(builder: (context) => Test()));
                 },
               ),
             ],

@@ -52,20 +52,32 @@ class _ChartsState extends State<Charts> {
     String url =
         'http://43.204.133.45:4000/sensor/levelchartdata/$_selectedCylinder/$_selectedAsset';
     print('Fetching data from: $url');
-
     final response = await http.get(Uri.parse(url));
     print('Response status: ${response.statusCode}');
     print('Response body: ${response.body}');
 
     if (response.statusCode == 200) {
       List<dynamic> jsonData = jsonDecode(response.body);
-      List<FlSpot> loadedData = jsonData.map((dataPoint) {
-        double y = double.parse(dataPoint[_selectedAsset].toString());
-        DateTime createdAt = DateTime.parse(dataPoint['createdAt']);
-        double x = createdAt.millisecondsSinceEpoch.toDouble();
-        return FlSpot(x, y);
-      }).toList();
+      List<FlSpot> loadedData = [];
+      if (jsonData.isNotEmpty) {
+        // Calculate the x interval if needed
+        double firstTimestamp = DateTime.parse(jsonData.first['createdAt'])
+            .millisecondsSinceEpoch
+            .toDouble();
+        double lastTimestamp = DateTime.parse(jsonData.last['createdAt'])
+            .millisecondsSinceEpoch
+            .toDouble();
+        double xInterval = (lastTimestamp - firstTimestamp) / jsonData.length;
 
+        loadedData = jsonData.map((dataPoint) {
+          double y = double.parse(dataPoint[_selectedAsset].toString());
+          DateTime createdAt = DateTime.parse(dataPoint['createdAt']);
+          double x =
+              (createdAt.millisecondsSinceEpoch.toDouble() - firstTimestamp) /
+                  xInterval; // Normalizing x values
+          return FlSpot(x, y);
+        }).toList();
+      }
       setState(() {
         _chartData = loadedData;
       });
@@ -214,9 +226,29 @@ class _ChartsState extends State<Charts> {
     // Sorting the data by x (timestamp) to ensure correct plotting
     _chartData.sort((a, b) => a.x.compareTo(b.x));
 
+    // Smooth the data using a moving average
+    List<FlSpot> smoothedData = [];
+    for (int i = 0; i < _chartData.length; i++) {
+      double sum = _chartData[i].y;
+      int count = 1;
+      for (int j = 1; j <= 5; j++) {
+        // Adjust the window size as needed
+        if (i - j >= 0) {
+          sum += _chartData[i - j].y;
+          count++;
+        }
+        if (i + j < _chartData.length) {
+          sum += _chartData[i + j].y;
+          count++;
+        }
+      }
+      double average = sum / count;
+      smoothedData.add(FlSpot(_chartData[i].x, average));
+    }
+
     // Dynamic range calculations with padding
-    final double minX = _chartData.isNotEmpty ? _chartData.first.x : 0;
-    final double maxX = _chartData.isNotEmpty ? _chartData.last.x : 0;
+    final double minX = smoothedData.isNotEmpty ? smoothedData.first.x : 0;
+    final double maxX = smoothedData.isNotEmpty ? smoothedData.last.x : 0;
     final double rangePadding =
         (maxX - minX) * 0.05; // Adding 5% padding on both sides
 
@@ -224,13 +256,13 @@ class _ChartsState extends State<Charts> {
       minX: minX - rangePadding,
       maxX: maxX + rangePadding,
       minY: 0,
-      maxY: _chartData.isEmpty
-          ? 10
-          : _chartData.map((spot) => spot.y).reduce(max) + 1,
+      maxY: smoothedData.isEmpty
+          ? 30
+          : smoothedData.map((spot) => spot.y).reduce(max) + 1,
       // Adding some padding to maxY
       lineBarsData: [
         LineChartBarData(
-          spots: _chartData,
+          spots: smoothedData,
           isCurved: false,
           gradient: const LinearGradient(
             colors: [AppColors.contentColorCyan, AppColors.contentColorBlue],
