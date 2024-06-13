@@ -60,8 +60,8 @@ class _SettingsState extends State<Settings> {
                 child: const Text("Test Page"),
                 onPressed: () {
                   // Removed the 'const' keyword from the Test constructor
-                  Navigator.push(
-                      context, MaterialPageRoute(builder: (context) => Test()));
+                  Navigator.push(context,
+                      MaterialPageRoute(builder: (context) => MyApp()));
                 },
               ),
             ],

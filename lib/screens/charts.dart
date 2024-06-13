@@ -36,6 +36,7 @@ class _ChartsState extends State<Charts> {
   String _selectedCylinder = "XY00001";
   String _selectedAsset = "level";
   List<FlSpot> _chartData = [];
+  List<String> _timestamps = [];
   Timer? _timer;
 
   @override
@@ -59,27 +60,17 @@ class _ChartsState extends State<Charts> {
     if (response.statusCode == 200) {
       List<dynamic> jsonData = jsonDecode(response.body);
       List<FlSpot> loadedData = [];
-      if (jsonData.isNotEmpty) {
-        // Calculate the x interval if needed
-        double firstTimestamp = DateTime.parse(jsonData.first['createdAt'])
-            .millisecondsSinceEpoch
-            .toDouble();
-        double lastTimestamp = DateTime.parse(jsonData.last['createdAt'])
-            .millisecondsSinceEpoch
-            .toDouble();
-        double xInterval = (lastTimestamp - firstTimestamp) / jsonData.length;
-
-        loadedData = jsonData.map((dataPoint) {
-          double y = double.parse(dataPoint[_selectedAsset].toString());
-          DateTime createdAt = DateTime.parse(dataPoint['createdAt']);
-          double x =
-              (createdAt.millisecondsSinceEpoch.toDouble() - firstTimestamp) /
-                  xInterval; // Normalizing x values
-          return FlSpot(x, y);
-        }).toList();
+      List<String> timestamps = [];
+      for (int i = 0; i < jsonData.length; i++) {
+        var item = jsonData[i];
+        double level = double.parse(item[_selectedAsset].toString());
+        loadedData.add(FlSpot(i.toDouble(), level));
+        timestamps.add(DateFormat('MM/dd\nHH:mm')
+            .format(DateTime.parse(item['createdAt'])));
       }
       setState(() {
         _chartData = loadedData;
+        _timestamps = timestamps;
       });
     } else {
       print('Failed to fetch data');
@@ -223,32 +214,14 @@ class _ChartsState extends State<Charts> {
   }
 
   LineChartData mainData() {
-    // Sorting the data by x (timestamp) to ensure correct plotting
+    // Sorting the data by x (index) to ensure correct plotting
     _chartData.sort((a, b) => a.x.compareTo(b.x));
 
-    // Smooth the data using a moving average
-    List<FlSpot> smoothedData = [];
-    for (int i = 0; i < _chartData.length; i++) {
-      double sum = _chartData[i].y;
-      int count = 1;
-      for (int j = 1; j <= 5; j++) {
-        // Adjust the window size as needed
-        if (i - j >= 0) {
-          sum += _chartData[i - j].y;
-          count++;
-        }
-        if (i + j < _chartData.length) {
-          sum += _chartData[i + j].y;
-          count++;
-        }
-      }
-      double average = sum / count;
-      smoothedData.add(FlSpot(_chartData[i].x, average));
-    }
-
     // Dynamic range calculations with padding
-    final double minX = smoothedData.isNotEmpty ? smoothedData.first.x : 0;
-    final double maxX = smoothedData.isNotEmpty ? smoothedData.last.x : 0;
+    final double minX = _chartData.isNotEmpty ? _chartData.first.x : 0;
+    final double maxX = _chartData.isNotEmpty
+        ? _chartData.last.x
+        : 29; // Always use 0 to 29 range for x-axis
     final double rangePadding =
         (maxX - minX) * 0.05; // Adding 5% padding on both sides
 
@@ -256,13 +229,13 @@ class _ChartsState extends State<Charts> {
       minX: minX - rangePadding,
       maxX: maxX + rangePadding,
       minY: 0,
-      maxY: smoothedData.isEmpty
+      maxY: _chartData.isEmpty
           ? 30
-          : smoothedData.map((spot) => spot.y).reduce(max) + 1,
+          : _chartData.map((spot) => spot.y).reduce(max) + 1,
       // Adding some padding to maxY
       lineBarsData: [
         LineChartBarData(
-          spots: smoothedData,
+          spots: _chartData,
           isCurved: false,
           gradient: const LinearGradient(
             colors: [AppColors.contentColorCyan, AppColors.contentColorBlue],
@@ -290,24 +263,24 @@ class _ChartsState extends State<Charts> {
           sideTitles: SideTitles(
             showTitles: true,
             getTitlesWidget: (value, meta) {
-              var date = DateTime.fromMillisecondsSinceEpoch(value.toInt());
-              Widget dateText = Text(
-                DateFormat('MM/dd').format(date),
-                style: const TextStyle(
-                  color: Colors.black,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 10,
-                ),
-              );
-
-              // Rotate the text by 45 degrees
-              return Transform.rotate(
-                angle: 45 * pi / 140, // Converts degrees to radians
-                child: dateText,
-              );
+              int index = value.toInt();
+              if (index >= 0 && index < _timestamps.length) {
+                return SideTitleWidget(
+                  axisSide: meta.axisSide,
+                  child: Text(
+                    _timestamps[index],
+                    style: const TextStyle(
+                      color: Colors.black,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 10,
+                    ),
+                  ),
+                );
+              } else {
+                return Container();
+              }
             },
-            reservedSize:
-                60, // You might need to increase the reserved size for rotated labels
+            reservedSize: 60,
           ),
         ),
         leftTitles: AxisTitles(
@@ -315,7 +288,7 @@ class _ChartsState extends State<Charts> {
             showTitles: true,
             getTitlesWidget: (value, meta) {
               return Text(
-                value.toString(),
+                value.toInt().toString(),
                 style: const TextStyle(
                   color: Colors.blue, // Customize your text color
                   fontWeight: FontWeight.bold,
@@ -326,7 +299,6 @@ class _ChartsState extends State<Charts> {
             reservedSize: 40,
           ),
         ),
-
         topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
         rightTitles: const AxisTitles(
             sideTitles:
