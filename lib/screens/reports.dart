@@ -40,13 +40,16 @@ class _ReportsState extends State<Reports> {
       appBar: AppBar(
         automaticallyImplyLeading: false,
         backgroundColor: Colors.transparent,
-        title: Row(
+        title: const Row(
           children: [
-            Text('Report',
-                style: TextStyle(
-                    fontFamily: 'Epilogue',
-                    fontWeight: FontWeight.w300,
-                    fontSize: 30 * MediaQuery.of(context).size.width / 800)),
+            Text(
+              'Report',
+              style: TextStyle(
+                fontFamily: 'Epilogue',
+                fontWeight: FontWeight.w300,
+                fontSize: 30,
+              ),
+            ),
           ],
         ),
       ),
