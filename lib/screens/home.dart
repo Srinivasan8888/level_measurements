@@ -41,6 +41,7 @@ class _HomeState extends State<Home> {
   Timer? _timer;
   String? _selectedVal;
   String? _selectedValTime;
+  TextEditingController _thicknessController = TextEditingController();
   dynamic _currentLevel = 'Loading...'; // Initialized to 'Loading...'
   dynamic _currenttimestamp = 'Loading...';
   List<Map<String, dynamic>> _gridlist = [];
@@ -52,6 +53,14 @@ class _HomeState extends State<Home> {
     _selectedVal = _cylindersList.first;
     _selectedValTime = _TimerList.first;
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) => fetchData());
+    _thicknessController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _thicknessController.dispose();
+    _timer?.cancel();
+    super.dispose();
   }
 
   Future<void> fetchData() async {
@@ -123,10 +132,46 @@ class _HomeState extends State<Home> {
     return DateFormat('yyyy-MM-dd HH:mm:ss').format(utcDateTime.toLocal());
   }
 
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
+  void sendDataToApi() async {
+    String thickness = _thicknessController.text.trim();
+
+    // Construct your payload if needed
+    Map<String, dynamic> payload = {
+      'id': _selectedVal,
+      'timer': _selectedValTime,
+      'thickness': thickness,
+    };
+
+    // Encode parameters in the URL
+    String encodedTimer = Uri.encodeComponent(_selectedValTime ?? '');
+    String apiUrl = 'http://43.204.133.45:4000/sensor/levelTimer'
+        '?id=$_selectedVal'
+        '&timer=$encodedTimer'
+        '&thickness=$thickness';
+
+    // Print API URL before making the request
+    print('API URL: $apiUrl');
+
+    try {
+      final response = await http.post(
+        Uri.parse(apiUrl),
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8',
+        },
+        body: jsonEncode(payload), // Pass payload if required by the endpoint
+      );
+
+      if (response.statusCode == 200) {
+        // Handle success response
+        print('Data submitted successfully');
+      } else {
+        // Handle other status codes
+        print('Failed to submit data: ${response.statusCode}');
+      }
+    } catch (e) {
+      // Handle network errors or exceptions
+      print('Error submitting data: $e');
+    }
   }
 
   @override
@@ -279,7 +324,7 @@ class _HomeState extends State<Home> {
                     contentPadding: const EdgeInsets.symmetric(horizontal: 10),
                     filled: true,
                     fillColor:
-                        Colors.orange[100], // Your desired background color
+                        Colors.lightBlue[50], // Your desired background color
                   ),
                   child: Row(
                     children: [
@@ -295,7 +340,7 @@ class _HomeState extends State<Home> {
                               setState(() {
                                 _selectedValTime = newValue;
                               });
-                              fetchData();
+                              // fetchData();
                             },
                             items: _TimerList.map<DropdownMenuItem<String>>(
                                 (String value) {
@@ -311,6 +356,7 @@ class _HomeState extends State<Home> {
                       // Adjust spacing between dropdown and text field
                       Expanded(
                         child: TextField(
+                          controller: _thicknessController,
                           decoration: InputDecoration(
                             labelText: "Thickness",
                             border: OutlineInputBorder(
@@ -332,6 +378,7 @@ class _HomeState extends State<Home> {
                       ElevatedButton(
                         onPressed: () {
                           // Add functionality for the button here
+                          sendDataToApi();
                         },
                         child: Text("submit"),
                       ),
