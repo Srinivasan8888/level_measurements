@@ -4,6 +4,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
 import 'package:syncfusion_flutter_gauges/gauges.dart';
 
 void main() {
@@ -27,9 +28,21 @@ class _HomeState extends State<Home> {
     "XY00004",
     "XY00005"
   ];
+
+  final _TimerList = [
+    "5 Mins",
+    "1 Hrs",
+    "1 Day",
+    "2 Days",
+    "7 Days",
+    "15 Days"
+  ];
+
   Timer? _timer;
   String? _selectedVal;
+  String? _selectedValTime;
   dynamic _currentLevel = 'Loading...'; // Initialized to 'Loading...'
+  dynamic _currenttimestamp = 'Loading...';
   List<Map<String, dynamic>> _gridlist = [];
   Map<String, dynamic>? _lastData;
 
@@ -37,6 +50,7 @@ class _HomeState extends State<Home> {
   void initState() {
     super.initState();
     _selectedVal = _cylindersList.first;
+    _selectedValTime = _TimerList.first;
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) => fetchData());
   }
 
@@ -48,6 +62,7 @@ class _HomeState extends State<Home> {
       if (response.statusCode == 200) {
         var newData = jsonDecode(response.body);
         print(newData);
+        String formattedUpdatedAt = _formatUtcTo24Hour(newData['updatedAt']);
         bool hasDataChanged(
             Map<String, dynamic>? oldData, Map<String, dynamic> newData) {
           if (oldData == null) return true;
@@ -58,12 +73,16 @@ class _HomeState extends State<Home> {
               oldData['humidity'] != newData['humidity'] ||
               oldData['pressure'] != newData['pressure'] ||
               oldData['altitude'] != newData['altitude'] ||
-              oldData['datafrequency'] != newData['datafrequency'];
+              oldData['datafrequency'] != newData['datafrequency'] ||
+              oldData['updatedAt'] !=
+                  newData['updatedAt']; // Fixed placement of this line
         }
 
         if (hasDataChanged(_lastData, newData)) {
           setState(() {
             _currentLevel = newData['level'];
+            _currenttimestamp = formattedUpdatedAt;
+
             _gridlist = [
               {
                 "title": "Battery",
@@ -99,6 +118,11 @@ class _HomeState extends State<Home> {
     }
   }
 
+  String _formatUtcTo24Hour(String utcDateString) {
+    DateTime utcDateTime = DateTime.parse(utcDateString);
+    return DateFormat('yyyy-MM-dd HH:mm:ss').format(utcDateTime.toLocal());
+  }
+
   @override
   void dispose() {
     _timer?.cancel();
@@ -121,7 +145,7 @@ class _HomeState extends State<Home> {
         child: Column(
           children: [
             SizedBox(
-              height: 280,
+              height: 300,
               child: _head(context),
             ),
             Expanded(
@@ -199,49 +223,127 @@ class _HomeState extends State<Home> {
           child: Container(
             width: 300,
             decoration: BoxDecoration(
-              color: Colors.lightBlue[50],
               borderRadius: BorderRadius.circular(4),
               boxShadow: [
                 BoxShadow(
-                    color: Colors.black.withOpacity(0.35),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2))
+                  color: Colors.black.withOpacity(0.35),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
               ],
             ),
-            child: InputDecorator(
-              decoration: InputDecoration(
-                labelText: "Select Cylinder No",
-                border:
-                    OutlineInputBorder(borderRadius: BorderRadius.circular(4)),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 10),
-              ),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                  value: _selectedVal ?? _cylindersList.first,
-                  isExpanded: true,
-                  icon: const Icon(Icons.arrow_drop_down_circle,
-                      color: Colors.deepPurple),
-                  dropdownColor: Colors.deepPurple.shade50,
-                  onChanged: (String? newValue) {
-                    setState(() {
-                      _selectedVal = newValue;
-                    });
-                    fetchData();
-                  },
-                  items: _cylindersList
-                      .map<DropdownMenuItem<String>>((String value) {
-                    return DropdownMenuItem<String>(
-                      value: value,
-                      child: Text(value),
-                    );
-                  }).toList(),
+            child: Column(
+              children: [
+                InputDecorator(
+                  decoration: InputDecoration(
+                    labelText: "Select Cylinder No",
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+                    filled: true,
+                    fillColor:
+                        Colors.lightBlue[50], // Your desired background color
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: _selectedVal ?? _cylindersList.first,
+                      isExpanded: true,
+                      icon: const Icon(Icons.arrow_drop_down_circle,
+                          color: Colors.deepPurple),
+                      dropdownColor: Colors.deepPurple.shade50,
+                      onChanged: (String? newValue) {
+                        setState(() {
+                          _selectedVal = newValue;
+                        });
+                        fetchData();
+                      },
+                      items: _cylindersList
+                          .map<DropdownMenuItem<String>>((String value) {
+                        return DropdownMenuItem<String>(
+                          value: value,
+                          child: Text(value),
+                        );
+                      }).toList(),
+                    ),
+                  ),
                 ),
-              ),
+                SizedBox(height: 20),
+                // Adjust spacing between the InputDecorators if needed
+                InputDecorator(
+                  decoration: InputDecoration(
+                    labelText: "Select the Timer",
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+                    filled: true,
+                    fillColor:
+                        Colors.orange[100], // Your desired background color
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            value: _selectedValTime ?? _TimerList.first,
+                            isExpanded: true,
+                            icon: const Icon(Icons.arrow_drop_down_circle,
+                                color: Colors.deepPurple),
+                            dropdownColor: Colors.deepPurple.shade50,
+                            onChanged: (String? newValue) {
+                              setState(() {
+                                _selectedValTime = newValue;
+                              });
+                              fetchData();
+                            },
+                            items: _TimerList.map<DropdownMenuItem<String>>(
+                                (String value) {
+                              return DropdownMenuItem<String>(
+                                value: value,
+                                child: Text(value),
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: 10),
+                      // Adjust spacing between dropdown and text field
+                      Expanded(
+                        child: TextField(
+                          decoration: InputDecoration(
+                            labelText: "Thickness",
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            contentPadding:
+                                const EdgeInsets.symmetric(horizontal: 10),
+                            filled: true,
+                            fillColor: Colors
+                                .green[100], // Example color for text field
+                          ),
+                          keyboardType:
+                              TextInputType.numberWithOptions(decimal: true),
+                          // Add any additional properties or controllers as needed
+                        ),
+                      ),
+                      SizedBox(width: 10),
+                      // Adjust spacing between text field and button
+                      ElevatedButton(
+                        onPressed: () {
+                          // Add functionality for the button here
+                        },
+                        child: Text("submit"),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
         ),
         Positioned(
-          top: 110,
+          top: 150,
           left: MediaQuery.of(context).size.width * 0.5 - 160,
           child: Container(
             height: 140,
@@ -286,11 +388,14 @@ class _HomeState extends State<Home> {
                 Padding(
                   padding:
                       EdgeInsets.only(left: 20, right: 20, bottom: 8, top: 15),
-                  child: Text("Last Updated: 4/18/2024 1:12 PM",
-                      style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
-                          color: Colors.white)),
+                  child:
+                      // Text("Last Updated: 4/18/2024 1:12 PM",
+                      Text(
+                          "Last Updated: ${_currenttimestamp ?? 'Loading...'} ML",
+                          style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                              color: Colors.white)),
                 ),
               ],
             ),
