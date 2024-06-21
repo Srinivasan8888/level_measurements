@@ -135,41 +135,41 @@ class _HomeState extends State<Home> {
   void sendDataToApi() async {
     String thickness = _thicknessController.text.trim();
 
-    // Construct your payload if needed
-    Map<String, dynamic> payload = {
-      'id': _selectedVal,
-      'timer': _selectedValTime,
-      'thickness': thickness,
-    };
+    // Verify if values are available
+    if (_selectedVal == null || _selectedValTime == null || thickness.isEmpty) {
+      print('Error: Missing required data');
+      return;
+    }
 
-    // Encode parameters in the URL
-    String encodedTimer = Uri.encodeComponent(_selectedValTime ?? '');
+    // Encode timer for URL
+    String encodedTimer =
+        Uri.encodeComponent(_selectedValTime!); // Use ! to assert non-null
+
+    // Construct API URL with query parameters
     String apiUrl = 'http://43.204.133.45:4000/sensor/levelTimer'
         '?id=$_selectedVal'
         '&timer=$encodedTimer'
         '&thickness=$thickness';
 
-    // Print API URL before making the request
     print('API URL: $apiUrl');
 
     try {
-      final response = await http.post(
+      final response = await http.get(
         Uri.parse(apiUrl),
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8',
         },
-        body: jsonEncode(payload), // Pass payload if required by the endpoint
       );
 
+      // Check response status code
       if (response.statusCode == 200) {
-        // Handle success response
         print('Data submitted successfully');
+        print('Response: ${response.body}');
       } else {
-        // Handle other status codes
         print('Failed to submit data: ${response.statusCode}');
+        print('Response: ${response.body}');
       }
     } catch (e) {
-      // Handle network errors or exceptions
       print('Error submitting data: $e');
     }
   }
