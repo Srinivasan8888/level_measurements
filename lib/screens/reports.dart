@@ -1,17 +1,39 @@
-import 'dart:convert';
 import 'dart:io';
 
-import 'package:excel/excel.dart';
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:syncfusion_flutter_xlsio/xlsio.dart' as xlsio;
 
 class Reports extends StatefulWidget {
   const Reports({super.key});
 
   @override
   State<Reports> createState() => _ReportsState();
+}
+
+Future<bool> _request_per(Permission permission) async {
+  AndroidDeviceInfo build = await DeviceInfoPlugin().androidInfo;
+  if (build.version.sdkInt >= 30) {
+    var re = await Permission.manageExternalStorage.request();
+    if (re.isGranted) {
+      return true;
+    } else {
+      return false;
+    }
+  } else {
+    if (await permission.isGranted) {
+      return true;
+    } else {
+      var result = await permission.request();
+      if (result.isGranted) {
+        return true;
+      } else {
+        return false;
+      }
+    }
+  }
 }
 
 class _ReportsState extends State<Reports> {
@@ -46,86 +68,288 @@ class _ReportsState extends State<Reports> {
       setState(() {
         if (isFromDate) {
           fromDate = picked;
-          print("Selected From Date: $fromDate");
         } else {
           toDate = picked;
-          print("Selected To Date: $toDate");
         }
       });
     }
   }
 
-  void fetchdatafromapipdf() {}
+  //
+  // void fetchdatafromapipdf() {}
+  //
+  // Future<bool> requestPermissions() async {
+  //   var status = await Permission.storage.status;
+  //   print("Current permission status: $status");
+  //
+  //   if (!status.isGranted) {
+  //     print("Requesting storage permission.");
+  //     status = await Permission.storage.request();
+  //     print("New permission status: $status");
+  //   }
+  //   return status.isGranted;
+  // }
+  //
+  // void fetchDataFromApiExcel(BuildContext context, String? _selectedVal,
+  //     DateTime? fromDate, DateTime? toDate) async {
+  //   final String apiEndpoint =
+  //       'http://43.204.133.45:4000/sensor/levelreportdata';
+  //   if (_selectedVal == null || fromDate == null || toDate == null) {
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       SnackBar(content: Text('Please select all filter options')),
+  //     );
+  //     return;
+  //   }
+  //
+  //   final Map<String, String> queryParams = {
+  //     'id': _selectedVal,
+  //     'date1': fromDate.toIso8601String(),
+  //     'date2': toDate.toIso8601String(),
+  //   };
+  //
+  //   try {
+  //     var uri = Uri.parse(apiEndpoint).replace(queryParameters: queryParams);
+  //     var response = await http.get(uri);
+  //
+  //     if (response.statusCode == 200) {
+  //       List<dynamic> data = json.decode(response.body);
+  //       await exportToExcel(data, context);
+  //       ScaffoldMessenger.of(context).showSnackBar(
+  //         SnackBar(content: Text('Excel file downloaded successfully!')),
+  //       );
+  //     } else {
+  //       throw Exception(
+  //           'Failed to load data with status code ${response.statusCode}');
+  //     }
+  //   } catch (e) {
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       SnackBar(content: Text('Error fetching data: $e')),
+  //     );
+  //     print(e);
+  //   }
+  // }
+  //
+  // Future<void> exportToExcel(List<dynamic> data, BuildContext context) async {
+  //   var excel = Excel.createExcel();
+  //   Sheet sheet = excel['SensorData'];
+  //
+  //   // Define headers
+  //   List<String> headers = [
+  //     'ID',
+  //     'Level',
+  //     'Device Temp',
+  //     'Signal',
+  //     'Battery Level',
+  //     'Humidity',
+  //     'Pressure',
+  //     'Altitude',
+  //     'Data Frequency',
+  //     'Created At'
+  //   ];
+  //
+  //   // Append headers
+  //   for (int i = 0; i < headers.length; i++) {
+  //     var cell =
+  //         sheet.cell(CellIndex.indexByColumnRow(columnIndex: i, rowIndex: 0));
+  //     cell.value = headers[i] as CellValue?;
+  //   }
+  //
+  //   // Append data rows
+  //   for (int rowIndex = 0; rowIndex < data.length; rowIndex++) {
+  //     var datum = data[rowIndex];
+  //     for (int columnIndex = 0; columnIndex < headers.length; columnIndex++) {
+  //       sheet
+  //               .cell(CellIndex.indexByColumnRow(
+  //                   columnIndex: columnIndex, rowIndex: rowIndex + 1))
+  //               .value =
+  //           datum[headers[columnIndex].toLowerCase().replaceAll(' ', '')]
+  //               .toString() as CellValue?;
+  //     }
+  //   }
+  //
+  //   var excelFile = excel.encode();
+  //   if (excelFile != null) {
+  //     await _saveFile(excelFile, context);
+  //   } else {
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       SnackBar(content: Text('Failed to generate the Excel file')),
+  //     );
+  //   }
+  // }
+  //
+  // Future<void> _saveFile(List<int> fileBytes, BuildContext context) async {
+  //   if (await Permission.storage.request().isGranted) {
+  //     Directory? directory;
+  //
+  //     if (Platform.isAndroid) {
+  //       directory = await getExternalStorageDirectory();
+  //       // Optionally change to a specific path
+  //       directory = Directory('/storage/emulated/0/Documents');
+  //     } else if (Platform.isIOS) {
+  //       directory = await getApplicationDocumentsDirectory();
+  //     } else {
+  //       directory = await getApplicationSupportDirectory();
+  //     }
+  //
+  //     if (directory != null) {
+  //       final path = join(directory.path, "Report.xlsx");
+  //       final file = File(path);
+  //
+  //       // Save the file
+  //       await file.writeAsBytes(fileBytes, flush: true);
+  //       ScaffoldMessenger.of(context).showSnackBar(
+  //         SnackBar(content: Text('Report saved to $path')),
+  //       );
+  //     } else {
+  //       ScaffoldMessenger.of(context).showSnackBar(
+  //         SnackBar(content: Text('Failed to get the storage directory')),
+  //       );
+  //     }
+  //   } else {
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       SnackBar(content: Text('Storage permission denied')),
+  //     );
+  //   }
+  // }
+  // Future<void> requestStoragePermission() async {
+  //   var status = await Permission.storage.request();
+  //   if (status.isGranted) {
+  //     // Permission granted, proceed with file operations
+  //   } else {
+  //     // Permission denied, handle accordingly
+  //     print('Storage permission not granted');
+  //   }
+  // }
 
-  void fetchdatafromapiexcel() async {
-    var url = Uri.parse(
-        'http://43.204.133.45:4000/sensor/levelreportdata?id=$_selectedVal&date1=${fromDate?.toIso8601String()}&date2=${toDate?.toIso8601String()}');
-    var response = await http.get(url);
-    if (response.statusCode == 200) {
-      var jsondata = jsonDecode(response.body) as List;
-      print(url);
-      generateExcel(jsondata);
+  Future<bool> _checkStoragePermission() async {
+    PermissionStatus status;
+
+    if (Platform.isAndroid) {
+      final DeviceInfoPlugin deviceInfoPlugin = DeviceInfoPlugin();
+      final AndroidDeviceInfo info = await deviceInfoPlugin.androidInfo;
+
+      if ((info.version.sdkInt) >= 33) {
+        status = await Permission.manageExternalStorage.request();
+      } else {
+        status = await Permission.storage.request();
+      }
     } else {
-      throw Exception('Failed to load data');
+      status = await Permission.storage.request();
+    }
+
+    switch (status) {
+      case PermissionStatus.granted:
+      case PermissionStatus.limited:
+        return true;
+      default:
+        return false;
     }
   }
 
-  void generateExcel(List<dynamic> jsonData) async {
-    var excel = Excel.createExcel();
-    Sheet sheetObject = excel['Sheet1'];
+  void test() async {
+    final plugin = DeviceInfoPlugin();
+    final android = await plugin.androidInfo;
 
-    List<String> columnHeaders = [
-      "ID",
-      "Level",
-      "Device Temp",
-      "Signal",
-      "Battery Level",
-      "Humidity",
-      "Pressure",
-      "Altitude",
-      "Data Frequency",
-      "Created At",
-      "Updated At"
-    ];
+    final storageStatus = android.version.sdkInt < 33
+        ? await Permission.storage.request()
+        : PermissionStatus.granted;
 
-    // Append column headers directly without casting
-    sheetObject.appendRow(columnHeaders.cast<CellValue?>());
+    if (storageStatus == PermissionStatus.granted) {
+      print("granted");
+    }
+    if (storageStatus == PermissionStatus.denied) {
+      print("denied");
+    }
+    if (storageStatus == PermissionStatus.permanentlyDenied) {
+      openAppSettings();
+    }
+  }
 
-    DateFormat format = DateFormat('yyyy-MM-dd HH:mm:ss'); // Date format
+  Future<void> exportToExcel() async {
+    Directory? directory;
 
-    for (var data in jsonData) {
-      var formattedCreatedAt = data['createdAt'] != null
-          ? format.format(DateTime.parse(data['createdAt']))
-          : '';
-      var formattedUpdatedAt = data['updatedAt'] != null
-          ? format.format(DateTime.parse(data['updatedAt']))
-          : '';
-
-      List<dynamic> row = [
-        data['id'] ?? '',
-        data['level'] ?? '',
-        data['devicetemp'] ?? '',
-        data['signal'] ?? '',
-        data['batterylevel'] ?? '',
-        data['humidity'] ?? '',
-        data['pressure'] ?? '',
-        data['altitude'] ?? '',
-        data['datafrequency'] ?? '',
-        formattedCreatedAt,
-        formattedUpdatedAt
-      ];
-
-      // Ensure each item is correctly handled as a CellValue
-      var excelRow =
-          row.map((item) => item is! CellValue ? "$item" : item).toList();
-      sheetObject.appendRow(excelRow.cast<CellValue?>());
+    // Determine directory based on platform
+    if (Platform.isAndroid) {
+      directory = await getExternalStorageDirectory();
+      // Use directory.path for external storage
+      directory = Directory('${directory?.path}/Level_measurement_xyma');
+    } else if (Platform.isIOS) {
+      directory = await getApplicationDocumentsDirectory();
+    } else if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+      directory = await getApplicationSupportDirectory();
+    } else {
+      throw UnsupportedError('Unsupported platform');
     }
 
-    var fileBytes = excel.save();
-    var directory = await getApplicationDocumentsDirectory();
-    File file = File("${directory.path}/SensorData.xlsx");
-    await file.writeAsBytes(fileBytes!, flush: true);
-    print("Excel file is saved at ${file.path}");
+    // Ensure storage permission is granted
+    var status = await Permission.storage.request();
+    if (status.isGranted) {
+      // Create directory if it does not exist
+      if (!await directory.exists()) {
+        await directory.create(recursive: true);
+      }
+
+      // Create Excel document using syncfusion_flutter_xlsio
+      final xlsio.Workbook workbook = xlsio.Workbook();
+      final xlsio.Worksheet sheet = workbook.worksheets[0];
+
+      // Define headers
+      List<String> headers = [
+        'ID',
+        'Level',
+        'Device Temp',
+        'Signal',
+        'Battery Level',
+        'Humidity',
+        'Pressure',
+        'Altitude',
+        'Data Frequency',
+        'Created At'
+      ];
+
+      // Add headers to the first row of the Excel sheet
+      for (int i = 0; i < headers.length; i++) {
+        sheet.getRangeByIndex(1, i + 1).setText(headers[i]);
+      }
+
+      // Sample data
+      List<Map<String, dynamic>> data = [
+        {
+          "id": "XY00001",
+          "level": "26",
+          "devicetemp": "48",
+          "signal": "61",
+          "batterylevel": "41",
+          "humidity": "23",
+          "pressure": "87",
+          "altitude": "86",
+          "datafrequency": "86",
+          "createdAt": "2024-05-04T18:16:24.000Z",
+        }
+      ];
+
+      // Add data to the subsequent rows
+      for (int rowIndex = 0; rowIndex < data.length; rowIndex++) {
+        var datum = data[rowIndex];
+        for (int columnIndex = 0; columnIndex < headers.length; columnIndex++) {
+          var key = headers[columnIndex].toLowerCase().replaceAll(' ', '');
+          var value = datum[key]?.toString() ?? '';
+          sheet.getRangeByIndex(rowIndex + 2, columnIndex + 1).setText(value);
+        }
+      }
+
+      // Save the Excel document
+      final List<int> bytes = workbook.saveAsStream();
+      workbook.dispose();
+
+      // Write bytes to file
+      final String filePath = '${directory.path}/Output.xlsx';
+      final File file = File(filePath);
+      await file.writeAsBytes(bytes, flush: true);
+      print('Excel file saved to $filePath');
+    } else {
+      print('Storage permission not granted');
+    }
   }
 
   @override
@@ -269,7 +493,7 @@ class _ReportsState extends State<Reports> {
                                 padding: const EdgeInsets.all(10),
                                 child: ElevatedButton(
                                   onPressed: () {
-                                    fetchdatafromapipdf();
+                                    // fetchdatafromapipdf();
                                   },
                                   style: ElevatedButton.styleFrom(
                                     foregroundColor: Colors.white,
@@ -298,9 +522,13 @@ class _ReportsState extends State<Reports> {
                               child: Padding(
                                 padding: const EdgeInsets.all(10),
                                 child: ElevatedButton(
-                                  onPressed: () {
-                                    fetchdatafromapiexcel();
-                                  },
+                                  // onPressed: () {
+                                  //   fetchDataFromApiExcel(context, _selectedVal,
+                                  //       fromDate, toDate);
+                                  // },
+
+                                  onPressed: exportToExcel,
+
                                   style: ElevatedButton.styleFrom(
                                     foregroundColor: Colors.white,
                                     backgroundColor: Colors.green.shade400,

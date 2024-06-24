@@ -1,9 +1,11 @@
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:getwidget/components/toggle/gf_toggle.dart';
 import 'package:getwidget/types/gf_toggle_type.dart';
 import 'package:level/screens/test.dart';
 import 'package:level/theme/theme.dart';
 import 'package:level/theme/theme_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 
 class Settings extends StatefulWidget {
@@ -11,6 +13,29 @@ class Settings extends StatefulWidget {
 
   @override
   State<Settings> createState() => _SettingsState();
+}
+
+Future<bool> _request_per(Permission permission) async {
+  AndroidDeviceInfo build = await DeviceInfoPlugin().androidInfo;
+  if (build.version.sdkInt >= 30) {
+    var re = await Permission.manageExternalStorage.request();
+    if (re.isGranted) {
+      return true;
+    } else {
+      return false;
+    }
+  } else {
+    if (await permission.isGranted) {
+      return true;
+    } else {
+      var result = await permission.request();
+      if (result.isGranted) {
+        return true;
+      } else {
+        return false;
+      }
+    }
+  }
 }
 
 class _SettingsState extends State<Settings> {
@@ -49,6 +74,15 @@ class _SettingsState extends State<Settings> {
                   print("logout pressed");
                 },
               ),
+              // ListTile(
+              //   title: const Text("Logout"),
+              //   trailing: const Icon(Icons.logout),
+              //   onTap: () async {
+              //     if(await _request_per(Permission.storage))=== true){
+              //
+              //     }
+              //   },
+              // ),
             ],
           ),
         ),
@@ -64,6 +98,15 @@ class _SettingsState extends State<Settings> {
                       MaterialPageRoute(builder: (context) => MyApp()));
                 },
               ),
+              ElevatedButton(
+                  onPressed: () async {
+                    if (await _request_per(Permission.storage) == true) {
+                      print('Permission in granted');
+                    } else {
+                      print('Permission is denied');
+                    }
+                  },
+                  child: const Text("Storage Permission"))
             ],
           ),
         ));
