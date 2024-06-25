@@ -1,7 +1,9 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:syncfusion_flutter_xlsio/xlsio.dart' as xlsio;
@@ -89,137 +91,45 @@ class _ReportsState extends State<Reports> {
   //   }
   //   return status.isGranted;
   // }
-  //
-  // void fetchDataFromApiExcel(BuildContext context, String? _selectedVal,
-  //     DateTime? fromDate, DateTime? toDate) async {
-  //   final String apiEndpoint =
-  //       'http://43.204.133.45:4000/sensor/levelreportdata';
-  //   if (_selectedVal == null || fromDate == null || toDate == null) {
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       SnackBar(content: Text('Please select all filter options')),
-  //     );
-  //     return;
-  //   }
-  //
-  //   final Map<String, String> queryParams = {
-  //     'id': _selectedVal,
-  //     'date1': fromDate.toIso8601String(),
-  //     'date2': toDate.toIso8601String(),
-  //   };
-  //
-  //   try {
-  //     var uri = Uri.parse(apiEndpoint).replace(queryParameters: queryParams);
-  //     var response = await http.get(uri);
-  //
-  //     if (response.statusCode == 200) {
-  //       List<dynamic> data = json.decode(response.body);
-  //       await exportToExcel(data, context);
-  //       ScaffoldMessenger.of(context).showSnackBar(
-  //         SnackBar(content: Text('Excel file downloaded successfully!')),
-  //       );
-  //     } else {
-  //       throw Exception(
-  //           'Failed to load data with status code ${response.statusCode}');
-  //     }
-  //   } catch (e) {
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       SnackBar(content: Text('Error fetching data: $e')),
-  //     );
-  //     print(e);
-  //   }
-  // }
-  //
-  // Future<void> exportToExcel(List<dynamic> data, BuildContext context) async {
-  //   var excel = Excel.createExcel();
-  //   Sheet sheet = excel['SensorData'];
-  //
-  //   // Define headers
-  //   List<String> headers = [
-  //     'ID',
-  //     'Level',
-  //     'Device Temp',
-  //     'Signal',
-  //     'Battery Level',
-  //     'Humidity',
-  //     'Pressure',
-  //     'Altitude',
-  //     'Data Frequency',
-  //     'Created At'
-  //   ];
-  //
-  //   // Append headers
-  //   for (int i = 0; i < headers.length; i++) {
-  //     var cell =
-  //         sheet.cell(CellIndex.indexByColumnRow(columnIndex: i, rowIndex: 0));
-  //     cell.value = headers[i] as CellValue?;
-  //   }
-  //
-  //   // Append data rows
-  //   for (int rowIndex = 0; rowIndex < data.length; rowIndex++) {
-  //     var datum = data[rowIndex];
-  //     for (int columnIndex = 0; columnIndex < headers.length; columnIndex++) {
-  //       sheet
-  //               .cell(CellIndex.indexByColumnRow(
-  //                   columnIndex: columnIndex, rowIndex: rowIndex + 1))
-  //               .value =
-  //           datum[headers[columnIndex].toLowerCase().replaceAll(' ', '')]
-  //               .toString() as CellValue?;
-  //     }
-  //   }
-  //
-  //   var excelFile = excel.encode();
-  //   if (excelFile != null) {
-  //     await _saveFile(excelFile, context);
-  //   } else {
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       SnackBar(content: Text('Failed to generate the Excel file')),
-  //     );
-  //   }
-  // }
-  //
-  // Future<void> _saveFile(List<int> fileBytes, BuildContext context) async {
-  //   if (await Permission.storage.request().isGranted) {
-  //     Directory? directory;
-  //
-  //     if (Platform.isAndroid) {
-  //       directory = await getExternalStorageDirectory();
-  //       // Optionally change to a specific path
-  //       directory = Directory('/storage/emulated/0/Documents');
-  //     } else if (Platform.isIOS) {
-  //       directory = await getApplicationDocumentsDirectory();
-  //     } else {
-  //       directory = await getApplicationSupportDirectory();
-  //     }
-  //
-  //     if (directory != null) {
-  //       final path = join(directory.path, "Report.xlsx");
-  //       final file = File(path);
-  //
-  //       // Save the file
-  //       await file.writeAsBytes(fileBytes, flush: true);
-  //       ScaffoldMessenger.of(context).showSnackBar(
-  //         SnackBar(content: Text('Report saved to $path')),
-  //       );
-  //     } else {
-  //       ScaffoldMessenger.of(context).showSnackBar(
-  //         SnackBar(content: Text('Failed to get the storage directory')),
-  //       );
-  //     }
-  //   } else {
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       SnackBar(content: Text('Storage permission denied')),
-  //     );
-  //   }
-  // }
-  // Future<void> requestStoragePermission() async {
-  //   var status = await Permission.storage.request();
-  //   if (status.isGranted) {
-  //     // Permission granted, proceed with file operations
-  //   } else {
-  //     // Permission denied, handle accordingly
-  //     print('Storage permission not granted');
-  //   }
-  // }
+
+  void fetchDataFromApiExcel(BuildContext context, String? _selectedVal,
+      DateTime? fromDate, DateTime? toDate) async {
+    const String apiEndpoint =
+        'http://43.204.133.45:4000/sensor/levelreportdata';
+    if (_selectedVal == null || fromDate == null || toDate == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select all filter options')),
+      );
+      return;
+    }
+
+    final Map<String, String> queryParams = {
+      'id': _selectedVal,
+      'date1': fromDate.toIso8601String(),
+      'date2': toDate.toIso8601String(),
+    };
+
+    try {
+      var uri = Uri.parse(apiEndpoint).replace(queryParameters: queryParams);
+      var response = await http.get(uri);
+
+      if (response.statusCode == 200) {
+        List<dynamic> data = json.decode(response.body);
+        await exportToExcel(data, context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Excel file downloaded successfully!')),
+        );
+      } else {
+        throw Exception(
+            'Failed to load data with status code ${response.statusCode}');
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error fetching data: $e')),
+      );
+      print(e);
+    }
+  }
 
   Future<bool> _checkStoragePermission() async {
     PermissionStatus status;
@@ -265,13 +175,12 @@ class _ReportsState extends State<Reports> {
     }
   }
 
-  Future<void> exportToExcel() async {
+  Future<void> exportToExcel(List<dynamic> data, BuildContext context) async {
     Directory? directory;
 
     // Determine directory based on platform
     if (Platform.isAndroid) {
       directory = await getExternalStorageDirectory();
-      // Use directory.path for external storage
       directory = Directory('${directory?.path}/Level_measurement_xyma');
     } else if (Platform.isIOS) {
       directory = await getApplicationDocumentsDirectory();
@@ -285,7 +194,7 @@ class _ReportsState extends State<Reports> {
     var status = await Permission.storage.request();
     if (status.isGranted) {
       // Create directory if it does not exist
-      if (!await directory.exists()) {
+      if (!await directory!.exists()) {
         await directory.create(recursive: true);
       }
 
@@ -311,22 +220,6 @@ class _ReportsState extends State<Reports> {
       for (int i = 0; i < headers.length; i++) {
         sheet.getRangeByIndex(1, i + 1).setText(headers[i]);
       }
-
-      // Sample data
-      List<Map<String, dynamic>> data = [
-        {
-          "id": "XY00001",
-          "level": "26",
-          "devicetemp": "48",
-          "signal": "61",
-          "batterylevel": "41",
-          "humidity": "23",
-          "pressure": "87",
-          "altitude": "86",
-          "datafrequency": "86",
-          "createdAt": "2024-05-04T18:16:24.000Z",
-        }
-      ];
 
       // Add data to the subsequent rows
       for (int rowIndex = 0; rowIndex < data.length; rowIndex++) {
@@ -488,46 +381,46 @@ class _ReportsState extends State<Reports> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                           children: [
+                            // Expanded(
+                            //   child: Padding(
+                            //     padding: const EdgeInsets.all(10),
+                            //     child: ElevatedButton(
+                            //       onPressed: () {
+                            //         // fetchdatafromapipdf();
+                            //       },
+                            //       style: ElevatedButton.styleFrom(
+                            //         foregroundColor: Colors.white,
+                            //         backgroundColor: Colors.green.shade400,
+                            //         // text color
+                            //         shape: RoundedRectangleBorder(
+                            //           borderRadius: BorderRadius.circular(
+                            //               10), // rounded corners
+                            //         ),
+                            //         elevation: 5,
+                            //         // shadow elevation
+                            //         padding: const EdgeInsets.symmetric(
+                            //             vertical: 15), // vertical padding
+                            //       ),
+                            //       child: const Text(
+                            //         'Download PDF',
+                            //         style: TextStyle(
+                            //           fontSize: 16, // slightly smaller text
+                            //           fontWeight: FontWeight.bold, // bold text
+                            //         ),
+                            //       ),
+                            //     ),
+                            //   ),
+                            // ),
                             Expanded(
                               child: Padding(
                                 padding: const EdgeInsets.all(10),
                                 child: ElevatedButton(
                                   onPressed: () {
-                                    // fetchdatafromapipdf();
+                                    fetchDataFromApiExcel(context, _selectedVal,
+                                        fromDate, toDate);
                                   },
-                                  style: ElevatedButton.styleFrom(
-                                    foregroundColor: Colors.white,
-                                    backgroundColor: Colors.green.shade400,
-                                    // text color
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(
-                                          10), // rounded corners
-                                    ),
-                                    elevation: 5,
-                                    // shadow elevation
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 15), // vertical padding
-                                  ),
-                                  child: const Text(
-                                    'Download PDF',
-                                    style: TextStyle(
-                                      fontSize: 16, // slightly smaller text
-                                      fontWeight: FontWeight.bold, // bold text
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            Expanded(
-                              child: Padding(
-                                padding: const EdgeInsets.all(10),
-                                child: ElevatedButton(
-                                  // onPressed: () {
-                                  //   fetchDataFromApiExcel(context, _selectedVal,
-                                  //       fromDate, toDate);
-                                  // },
 
-                                  onPressed: exportToExcel,
+                                  // onPressed: exportToExcel,
 
                                   style: ElevatedButton.styleFrom(
                                     foregroundColor: Colors.white,
