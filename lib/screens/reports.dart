@@ -178,10 +178,10 @@ class _ReportsState extends State<Reports> {
   Future<void> exportToExcel(List<dynamic> data, BuildContext context) async {
     Directory? directory;
 
-    // Determine directory based on platform
     if (Platform.isAndroid) {
-      directory = await getExternalStorageDirectory();
-      directory = Directory('${directory?.path}/Level_measurement_xyma');
+      directory = await getApplicationDocumentsDirectory();
+      directory = Directory(
+          '${directory.path}/Level_measurement_xyma'); // Save in 'Documents' folder
     } else if (Platform.isIOS) {
       directory = await getApplicationDocumentsDirectory();
     } else if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
@@ -194,7 +194,7 @@ class _ReportsState extends State<Reports> {
     var status = await Permission.storage.request();
     if (status.isGranted) {
       // Create directory if it does not exist
-      if (!await directory!.exists()) {
+      if (!await directory.exists()) {
         await directory.create(recursive: true);
       }
 
@@ -239,7 +239,10 @@ class _ReportsState extends State<Reports> {
       final String filePath = '${directory.path}/Output.xlsx';
       final File file = File(filePath);
       await file.writeAsBytes(bytes, flush: true);
-      print('Excel file saved to $filePath');
+      // print('');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Excel file saved to $filePath')),
+      );
     } else {
       print('Storage permission not granted');
     }

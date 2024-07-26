@@ -268,41 +268,41 @@ class _StaticDataChartState extends State<StaticDataChart> {
 //     await _saveFile(fileBytes);
 //   }
 //
-//   Future<void> _saveFile(Uint8List fileBytes) async {
-//     // Request storage permissions
-//     if (await Permission.storage.request().isGranted) {
-//       Directory? directory;
+// Future<void> _saveFile(Uint8List fileBytes) async {
+//   // Request storage permissions
+//   if (await Permission.storage.request().isGranted) {
+//     Directory? directory;
 //
-//       if (Platform.isAndroid) {
-//         directory = await getExternalStorageDirectory();
-//         // Use directory.path for external storage
-//         directory = Directory('/storage/emulated/0/Documents');
-//       } else if (Platform.isIOS) {
-//         directory = await getApplicationDocumentsDirectory();
-//       } else if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
-//         directory = await getApplicationSupportDirectory();
-//       }
+//     if (Platform.isAndroid) {
+//       directory = await getExternalStorageDirectory();
+//       // Use directory.path for external storage
+//       directory = Directory('/storage/emulated/0/Documents');
+//     } else if (Platform.isIOS) {
+//       directory = await getApplicationDocumentsDirectory();
+//     } else if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+//       directory = await getApplicationSupportDirectory();
+//     }
 //
-//       if (directory != null) {
-//         final path = "${directory.path}/Report.xlsx";
-//         final file = File(path);
+//     if (directory != null) {
+//       final path = "${directory.path}/Report.xlsx";
+//       final file = File(path);
 //
-//         // Save the file
-//         await file.writeAsBytes(fileBytes, flush: true);
-//         ScaffoldMessenger.of(context).showSnackBar(
-//           SnackBar(content: Text('Report saved to $path')),
-//         );
-//       } else {
-//         ScaffoldMessenger.of(context).showSnackBar(
-//           SnackBar(content: Text('Failed to get the storage directory')),
-//         );
-//       }
+//       // Save the file
+//       await file.writeAsBytes(fileBytes, flush: true);
+//       ScaffoldMessenger.of(context).showSnackBar(
+//         SnackBar(content: Text('Report saved to $path')),
+//       );
 //     } else {
 //       ScaffoldMessenger.of(context).showSnackBar(
-//         SnackBar(content: Text('Storage permission denied')),
+//         SnackBar(content: Text('Failed to get the storage directory')),
 //       );
 //     }
+//   } else {
+//     ScaffoldMessenger.of(context).showSnackBar(
+//       SnackBar(content: Text('Storage permission denied')),
+//     );
 //   }
+// }
 //
 //   @override
 //   Widget build(BuildContext context) {

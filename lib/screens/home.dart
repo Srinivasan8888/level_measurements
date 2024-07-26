@@ -380,7 +380,8 @@ class _HomeState extends State<Home> {
                           // Add functionality for the button here
                           sendDataToApi();
                         },
-                        child: Text("submit"),
+                        child:
+                            Text("submit", style: TextStyle(color: Colors.red)),
                       ),
                     ],
                   ),
@@ -437,8 +438,7 @@ class _HomeState extends State<Home> {
                       EdgeInsets.only(left: 20, right: 20, bottom: 8, top: 15),
                   child:
                       // Text("Last Updated: 4/18/2024 1:12 PM",
-                      Text(
-                          "Last Updated: ${_currenttimestamp ?? 'Loading...'} ML",
+                      Text("Last Updated: ${_currenttimestamp ?? 'Loading...'}",
                           style: TextStyle(
                               fontWeight: FontWeight.w600,
                               fontSize: 14,
