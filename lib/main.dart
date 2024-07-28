@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:level/router/navigation_bar.dart' as level_nav;
+import 'package:level/screens/login.dart';
 import 'package:level/theme/theme_provider.dart';
 import 'package:provider/provider.dart';
 
+// import 'package:level/router/navigation_bar.dart' as level_nav;
+// package:level/router/navigation_bar.dart' as level_nav;
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
@@ -49,7 +51,8 @@ class _MyHomePageState extends State<MyHomePage> {
             Navigator.push(
                 context,
                 MaterialPageRoute(
-                    builder: (context) => const level_nav.NavigationBar()));
+                    // builder: (context) => const level_nav.NavigationBar()));
+                    builder: (context) => Login()));
           },
         ),
       ),
