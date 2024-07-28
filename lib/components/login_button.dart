@@ -16,7 +16,7 @@ class LoginButton extends StatelessWidget {
             color: Colors.black, borderRadius: BorderRadius.circular(8)),
         child: const Center(
           child: Text(
-            "sign-in",
+            "Sign-in",
             style: TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.bold,
